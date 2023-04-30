@@ -23,6 +23,8 @@ def odds_by_time(Ymd: str, names: list, ids: dict) -> list:
 
     odds_all = []
     for game in response["games"]:
+        league = game["league_name"]
+        free = game["is_free"]
         teams = [game["teams"][0]["full_name"], game["teams"][1]["full_name"]]
         first_is_away = game["teams"][0]["id"] == game["away_team_id"]
         if not first_is_away:
@@ -65,7 +67,7 @@ def odds_by_time(Ymd: str, names: list, ids: dict) -> list:
                 odd["spread_home_line"],
                 odd["num_bets"],
             ]
-        odds = np.append(odds, [teams[0], teams[1], outcome])
+        odds = np.append(odds, [teams[0], teams[1], outcome, league, free])
         odds_all.append(odds)
 
     odds_df = pd.DataFrame(odds_all, columns=names)
@@ -114,6 +116,8 @@ def main():
     NAMES_CONCAT.append("Away")
     NAMES_CONCAT.append("Home")
     NAMES_CONCAT.append("Outcome")
+    NAMES_CONCAT.append("League")
+    NAMES_CONCAT.append("Free")
 
     full_data = pd.DataFrame(columns=NAMES_CONCAT)
     start = datetime.datetime.now()
