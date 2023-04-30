@@ -121,7 +121,7 @@ def main():
 
     full_data = pd.DataFrame(columns=NAMES_CONCAT)
     start = datetime.datetime.now()
-    dates = [start - datetime.timedelta(days=i + 1) for i in range(3)]
+    dates = [start - datetime.timedelta(days=i + 1) for i in range(365)]
     for date in dates:
         print(date.strftime("%Y%m%d"))
         current = date.strftime("%Y%m%d")
