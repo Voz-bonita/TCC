@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import datetime
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import asyncio
+import time
 
 
 def request_info(date_Ymd: str) -> dict:
@@ -19,14 +18,11 @@ def request_info(date_Ymd: str) -> dict:
     return json.loads(response.text)
 
 
-def odds_by_time(time: datetime.datetime, names: list, ids: dict) -> list:
-    response = request_info(time.strftime("%Y%m%d"))
-    server_time = time + datetime.timedelta(hours=3)
+def odds_by_time(Ymd: str, names: list, ids: dict) -> list:
+    response = request_info(Ymd)
+
     odds_all = []
     for game in response["games"]:
-        if game["start_time"][:19] != server_time.strftime("%Y-%m-%dT%H:%M:%S"):
-            continue
-
         teams = [game["teams"][0]["full_name"], game["teams"][1]["full_name"]]
         first_is_away = game["teams"][0]["id"] == game["away_team_id"]
         if not first_is_away:
@@ -41,33 +37,39 @@ def odds_by_time(time: datetime.datetime, names: list, ids: dict) -> list:
                 outcome = 1
             else:
                 outcome = 2
+        elif game["status"] == "postponed":
+            continue
+        else:
+            print(f"Something went wrong at {Ymd}")
 
-        odds = np.empty(len(ids) * 3)
+        odds = np.empty(len(ids) * 17)
         odds[:] = np.nan
         for odd in game["odds"][2:]:
             i = ids[odd["book_id"]]
-            odds[i * 3 : i * 3 + 3] = [odd["ml_away"], odd["ml_home"], odd["draw"]]
+            odds[i * 17 : i * 17 + 17] = [
+                odd["ml_away"],
+                odd["ml_home"],
+                odd["draw"],
+                odd["over"],
+                odd["under"],
+                odd["total"],
+                odd["away_total"],
+                odd["away_over"],
+                odd["away_under"],
+                odd["home_total"],
+                odd["home_over"],
+                odd["home_under"],
+                odd["spread_away"],
+                odd["spread_home"],
+                odd["spread_away_line"],
+                odd["spread_home_line"],
+                odd["num_bets"],
+            ]
         odds = np.append(odds, [teams[0], teams[1], outcome])
         odds_all.append(odds)
 
     odds_df = pd.DataFrame(odds_all, columns=names)
-    odds_df.to_csv(
-        f'./scrapping/raw/{time.strftime("%Y-%m-%dT%H_%M_%S")}.csv', index=False
-    )
-
     return odds_df
-
-
-def datetimes_all(response: dict) -> list:
-    date_times_all = []
-    for game in response["games"]:
-        game_date = datetime.datetime.strptime(
-            game["start_time"][:19], "%Y-%m-%dT%H:%M:%S"
-        )
-        game_date_brasilia = game_date - datetime.timedelta(hours=3)
-        date_times_all.append((game_date_brasilia))
-
-    return date_times_all
 
 
 def main():
@@ -84,35 +86,46 @@ def main():
     ]
     BOOK_ID = [68, 69, 71, 75, 76, 79, 123, 247, 972]
     BOOK_ID_ORDER = dict(zip(BOOK_ID, list(range(len(BOOK_ID)))))
-    OUTCOMES = ["Away", "Home", "Draw"]
+    BETTING_DATA = [
+        "Away",
+        "Home",
+        "Draw",
+        "Over",
+        "Under",
+        "Total",
+        "Away_Total",
+        "Away_Over",
+        "Away_Under",
+        "Home_Total",
+        "Home_Over",
+        "Home_Under",
+        "Spread_away",
+        "Spread_home",
+        "Spread_away_line",
+        "Spread_home_line",
+        "Num_Bets",
+    ]
 
     NAMES_ZIP = zip(
-        np.repeat(BETTING_BOOKS, len(OUTCOMES)), np.tile(OUTCOMES, len(BETTING_BOOKS))
+        np.repeat(BETTING_BOOKS, len(BETTING_DATA)),
+        np.tile(BETTING_DATA, len(BETTING_BOOKS)),
     )
     NAMES_CONCAT = list(map(lambda x: f"{x[0]} | {x[1]}", NAMES_ZIP))
     NAMES_CONCAT.append("Away")
     NAMES_CONCAT.append("Home")
     NAMES_CONCAT.append("Outcome")
 
-    today = datetime.datetime.now().strftime("%Y%m%d")
-    response = request_info(today)
-    date_times = datetimes_all(response)
+    full_data = pd.DataFrame(columns=NAMES_CONCAT)
+    start = datetime.datetime.now()
+    dates = [start - datetime.timedelta(days=i + 1) for i in range(3)]
+    for date in dates:
+        print(date.strftime("%Y%m%d"))
+        current = date.strftime("%Y%m%d")
+        odds_scrapped = odds_by_time(current, NAMES_CONCAT, BOOK_ID_ORDER)
+        full_data = pd.concat([full_data, odds_scrapped])
+        time.sleep(5)
 
-    scheduler = AsyncIOScheduler()
-
-    for dt in date_times:
-        print(dt)
-        scheduler.add_job(
-            odds_by_time, "date", run_date=dt, args=(dt, NAMES_CONCAT, BOOK_ID_ORDER)
-        )
-        break
-
-    scheduler.start()
-    try:
-        asyncio.get_event_loop().run_forever()
-    except (KeyboardInterrupt, SystemExit):
-        pass
-        scheduler.shutdown(wait=False)
+    full_data.to_csv("./scrapping/raw/data.csv", index=False)
 
 
 if __name__ == "__main__":
