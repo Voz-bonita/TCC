@@ -39,14 +39,21 @@ def odds_by_time(Ymd: str, names: list, ids: dict) -> list:
                 outcome = 1
             else:
                 outcome = 2
-        elif game["status"] == "postponed":
+        elif game["status"] == "postponed" or game["status"] == "scheduled":
             continue
         else:
-            print(f"Something went wrong at {Ymd}")
+            print(f"Something went wrong in {Ymd}")
 
         odds = np.empty(len(ids) * 17)
         odds[:] = np.nan
-        for odd in game["odds"][2:]:
+
+        try:
+            odds_listed = game["odds"][2:]
+        except KeyError:
+            print(f"No odds for a game in {Ymd}")
+            continue
+
+        for odd in odds_listed:
             i = ids[odd["book_id"]]
             odds[i * 17 : i * 17 + 17] = [
                 odd["ml_away"],
@@ -67,7 +74,7 @@ def odds_by_time(Ymd: str, names: list, ids: dict) -> list:
                 odd["spread_home_line"],
                 odd["num_bets"],
             ]
-        odds = np.append(odds, [teams[0], teams[1], outcome, league, free])
+        odds = np.append(odds, [teams[0], teams[1], outcome, league, free, Ymd])
         odds_all.append(odds)
 
     odds_df = pd.DataFrame(odds_all, columns=names)
@@ -118,6 +125,7 @@ def main():
     NAMES_CONCAT.append("Outcome")
     NAMES_CONCAT.append("League")
     NAMES_CONCAT.append("Free")
+    NAMES_CONCAT.append("Ymd")
 
     full_data = pd.DataFrame(columns=NAMES_CONCAT)
     start = datetime.datetime.now()
