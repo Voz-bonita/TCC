@@ -2,3 +2,4 @@ venv/
 raw/
 .vscode/
 chromedriver.exe
+abandoned_scrapping/
