@@ -3,3 +3,6 @@ raw/
 .vscode/
 chromedriver.exe
 abandoned_scrapping/
+scrapping/info/
+scrapping/odds/
+scrapping/base_info/
