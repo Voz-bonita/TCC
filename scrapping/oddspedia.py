@@ -60,7 +60,10 @@ def clean_odds(match_id, clean_data, full_odds, market):
         names = ["odd"]
 
     try:
-        divisions = full_odds[market]["periods"][0]["odds"]
+        for period in full_odds[market]["periods"]:
+            if period["name"] == "Fim do Jogo":
+                divisions = period["odds"]
+                break
     except KeyError:
         return
     odds_all = [*divisions["alternative"], *divisions["main"]]
@@ -115,12 +118,15 @@ def scrape_ids_odds(
             match_odds[IDS[market]] = current_market_data
 
         try:
-            for odd in match_odds["h2h"]["periods"][0]["odds"]:
-                clean_data[match_id]["h2h"][odd["bookie_name"]] = {
-                    "home": odd["o1"],
-                    "draw": odd["o2"],
-                    "away": odd["o3"],
-                }
+            for period in match_odds["h2h"]["periods"]:
+                if period["name"] == "Fim do Jogo":
+                    for odd in period["odds"]:
+                        clean_data[match_id]["h2h"][odd["bookie_name"]] = {
+                            "home": odd["o1"],
+                            "draw": odd["o2"],
+                            "away": odd["o3"],
+                        }
+                    break
         except KeyError:
             pass
 
