@@ -108,7 +108,7 @@ def scrape_ids_odds(
                 for data in incomplete_data["data"]["prematch"]:
                     if data["id"] == market:
                         current_market_data = data
-                    break
+                        break
                 current_market_data["id"]
 
             except IndexError:
