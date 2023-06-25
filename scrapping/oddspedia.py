@@ -12,10 +12,6 @@ import sys
 import os
 
 
-def chunk_list(lst, n):
-    return [lst[i : i + n] for i in range(0, len(lst), n)]
-
-
 def scrape_league_ids(
     league: dict,
     driver: webdriver,
@@ -59,92 +55,6 @@ def scrape_league_ids(
         start_date += relativedelta(months=6)
         end_date += relativedelta(months=6)
     return all_matches
-
-
-def clean_odds(match_id, clean_data, full_odds, market):
-    if market == "over/under":
-        names = ["over", "under"]
-    elif "spread" in market:
-        names = ["home", "away"]
-    elif market == "exact":
-        names = ["odd"]
-
-    try:
-        for period in full_odds[market]["periods"]:
-            if period["name"] == "Fim do Jogo":
-                divisions = period["odds"]
-                break
-    except KeyError:
-        return
-    odds_all = [*divisions["alternative"], *divisions["main"]]
-    for odds_list_item in odds_all:
-        clean_data[match_id][market][odds_list_item["name"]] = {}
-        for _id, odd in odds_list_item["odds"].items():
-            clean_data[match_id][market][odds_list_item["name"]][odd["bookie_name"]] = {
-                n[i]: odd[f"o{i+1}"] for i, n in enumerate(names)
-            }
-
-    return
-
-
-def scrape_ids_odds(
-    game_ids: dict,
-    driver: webdriver,
-) -> dict:
-    clean_data = {}
-    IDS = {1: "h2h", 3: "spread_asian", 4: "over/under", 6: "spread", 8: "exact"}
-    MARKET_INDEX = {1: 0, 3: 2, 4: 1, 8: 7, 6: 8}
-    BASE_URL = "https://oddspedia.com/api/v1/getMatchOdds?wettsteuer=0&geoCode=BR&bookmakerGeoCode=BR&bookmakerGeoState=&matchId={match_id}&oddGroupId={odds_market}&inplay=0&language=br".format
-
-    for match_id in game_ids:
-        match_odds = {}
-        clean_data[match_id] = {}
-        for market in IDS.keys():
-            clean_data[match_id][IDS[market]] = {}
-            driver.get(BASE_URL(match_id=match_id, odds_market=market))
-            try:
-                json_response = driver.find_element(By.TAG_NAME, "pre")
-            except selenium.common.exceptions.NoSuchElementException:
-                json_response = driver.find_element(By.TAG_NAME, "body")
-
-            try:
-                incomplete_data = json.loads(json_response.text)
-            except json.JSONDecodeError:
-                continue
-
-            try:
-                current_market_data = {}
-                for data in incomplete_data["data"]["prematch"]:
-                    if data["id"] == market:
-                        current_market_data = data
-                        break
-                current_market_data["id"]
-
-            except IndexError:
-                continue
-            except KeyError:
-                continue
-            match_odds[IDS[market]] = current_market_data
-
-        try:
-            for period in match_odds["h2h"]["periods"]:
-                if period["name"] == "Fim do Jogo":
-                    for odd in period["odds"]:
-                        clean_data[match_id]["h2h"][odd["bookie_name"]] = {
-                            "home": odd["o1"],
-                            "draw": odd["o2"],
-                            "away": odd["o3"],
-                        }
-                    break
-        except KeyError:
-            pass
-
-        clean_odds(match_id, clean_data, match_odds, "over/under")
-        clean_odds(match_id, clean_data, match_odds, "spread")
-        clean_odds(match_id, clean_data, match_odds, "exact")
-        clean_odds(match_id, clean_data, match_odds, "spread_asian")
-
-    return clean_data
 
 
 def main():
