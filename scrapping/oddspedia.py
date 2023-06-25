@@ -4,6 +4,7 @@ from selenium.webdriver.chrome import options
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.wait import WebDriverWait
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import selenium
 import json
 import time
@@ -19,35 +20,44 @@ def scrape_league_ids(
     league: dict,
     driver: webdriver,
 ) -> dict:
-    SPAN = {"start_date": "2019-01-01", "end_date": "2022-12-31"}
-    API_MATCH_LIST = "https://oddspedia.com/api/v1/getMatchList?excludeSpecialStatus=1&sortBy=default&perPageDefault=400&startDate={start_date}T03%3A00%3A00Z&endDate={end_date}T02%3A59%3A59Z&geoCode=BR&status=all&sport=futebol&popularLeaguesOnly=0&category={category}&league={alias}&round=&page=1&perPage=400&language=br".format
+    start_date = datetime.strptime("2019", "%Y")
+    end_date = start_date + relativedelta(months=6)
 
+    API_MATCH_LIST = "https://oddspedia.com/api/v1/getMatchList?excludeSpecialStatus=1&sortBy=default&perPageDefault=400&startDate={start_date}T03%3A00%3A00Z&endDate={end_date}T02%3A59%3A59Z&geoCode=BR&status=all&sport=futebol&popularLeaguesOnly=0&category={category}&league={alias}&round=&page=1&perPage=400&language=br".format
     all_matches = {}
 
-    driver.get(
-        API_MATCH_LIST(
-            start_date=SPAN["start_date"],
-            end_date=SPAN["end_date"],
-            category=league["category"],
-            alias=league["alias"],
+    while start_date.year < 2023:
+        time.sleep(1)
+        driver.get(
+            API_MATCH_LIST(
+                start_date=datetime.strftime(
+                    start_date - relativedelta(days=7), "%Y-%m-%d"
+                ),
+                end_date=datetime.strftime(
+                    end_date + relativedelta(days=7), "%Y-%m-%d"
+                ),
+                category=league["category"],
+                alias=league["alias"],
+            )
         )
-    )
-    try:
-        json_response = driver.find_element(By.TAG_NAME, "pre")
-    except selenium.common.exceptions.NoSuchElementException:
-        json_response = driver.find_element(By.TAG_NAME, "body")
+        try:
+            json_response = driver.find_element(By.TAG_NAME, "pre")
+        except selenium.common.exceptions.NoSuchElementException:
+            json_response = driver.find_element(By.TAG_NAME, "body")
 
-    current_matches = json.loads(json_response.text)
+        current_matches = json.loads(json_response.text)
 
-    for match in current_matches["data"]["matchList"]:
-        all_matches[match["id"]] = {
-            "home": match["ht"],
-            "away": match["at"],
-            "home_score": match["hscore"],
-            "away_score": match["ascore"],
-            "round": match["league_round_name"],
-        }
+        for match in current_matches["data"]["matchList"]:
+            all_matches[match["id"]] = {
+                "home": match["ht"],
+                "away": match["at"],
+                "home_score": match["hscore"],
+                "away_score": match["ascore"],
+                "round": match["league_round_name"],
+            }
 
+        start_date += relativedelta(months=6)
+        end_date += relativedelta(months=6)
     return all_matches
 
 
@@ -91,7 +101,6 @@ def scrape_ids_odds(
         clean_data[match_id] = {}
         for market in IDS.keys():
             clean_data[match_id][IDS[market]] = {}
-
             driver.get(BASE_URL(match_id=match_id, odds_market=market))
             try:
                 json_response = driver.find_element(By.TAG_NAME, "pre")
@@ -146,19 +155,14 @@ def main():
 
     opt = options.Options()
     driver = webdriver.Chrome(options=opt)
-    LEAGUES_keep = chunk_list(list(LEAGUES.keys()), 3)[int(sys.argv[1])]
-    already_collected = [f.split("-info.json")[0] for f in os.listdir("./info/")]
 
-    for league in LEAGUES_keep:
-        if league in already_collected:
-            continue
+    for league in LEAGUES:
         print(league)
-
         ids_found = scrape_league_ids(LEAGUES[league], driver)
-        odds_found = scrape_ids_odds(ids_found, driver)
+        odds_to_be_found = {i: {} for i in ids_found}
 
-        with open(f"odds/{league}-odds.json", "w+") as outfile:
-            json.dump(odds_found, outfile)
+        with open(f"blank_odds/{league}-odds.json", "w+") as outfile:
+            json.dump(odds_to_be_found, outfile)
 
         with open(f"info/{league}-info.json", "w+") as outfile:
             json.dump(ids_found, outfile)
