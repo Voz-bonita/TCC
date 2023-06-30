@@ -1,7 +1,5 @@
-library(ggplot2)
-library(dplyr)
-library(tidyr)
 pacman::p_load("ggplot2", "dplyr", "tidyr", "hrbrthemes")
+source("extra_functions.r", encoding = "UTF-8")
 
 x <- 0:5
 y <- 0:5
@@ -56,26 +54,16 @@ partition_example <- partition_example %>%
 partition_example["Mercado"] <- factor(partition_example[["Mercado"]], levels = c("Vitória do time da casa", "Empate", "Vitória do time visitante", "Total de Gols", "Ambos Marcam", "Spread"))
 
 
-ggplot(data = partition_example, aes(x = `x`, y = `y`, fill = `Probabilidade`)) +
+(ggplot(
+    data = partition_example,
+    aes(x = `x`, y = `y`, fill = `Probabilidade`)
+) +
     geom_tile(color = "black") +
     facet_wrap(vars(Mercado)) +
-    theme(legend.position = "none") +
     scale_x_continuous(breaks = 0:5) +
     scale_y_continuous(breaks = 0:5) +
     scale_fill_gradient(low = "grey", high = "steelblue") +
     coord_fixed() +
     xlab("Gols to time da casa") +
-    ylab("Gols do time visitante") +
-    theme(
-        strip.background = element_rect(
-            color = "black", fill = "lightblue", size = 0.5, linetype = "solid"
-        ),
-        strip.text.x = element_text(
-            size = 10, color = "black",
-        ),
-        axis.line = element_line(colour = "black"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.border = element_blank(),
-        panel.background = element_blank()
-    )
+    ylab("Gols do time visitante")) %>%
+    style_surface(legend.position = "none")
