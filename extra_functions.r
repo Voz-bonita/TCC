@@ -1,4 +1,4 @@
-pacman::p_load("kableExtra", "ggplot2")
+pacman::p_load("kableExtra", "ggplot2", "magick")
 
 format_tab <- function(df, caption, ...) {
     tabela <- kable(
@@ -31,4 +31,16 @@ style_surface <- function(plot, ...) {
             ...
         )
     return(plot)
+}
+
+coord_fixed_save_cropped <- function(plot, path) {
+    ggplot2::ggsave(filename = path, plot = plot)
+    img <- magick::image_read(path = path)
+    info <- magick::image_info(img)
+    img <- magick::image_crop(img, magick::geometry_area(
+        info[["width"]],
+        info[["height"]] - 392 - 350,
+        x_off = 0, y_off = 350
+    ))
+    magick::image_write(img, path)
 }

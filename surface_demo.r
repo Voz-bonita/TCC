@@ -66,4 +66,5 @@ partition_example["Mercado"] <- factor(partition_example[["Mercado"]], levels = 
     coord_fixed() +
     xlab("Gols to time da casa") +
     ylab("Gols do time visitante")) %>%
-    style_surface(legend.position = "none")
+    style_surface(legend.position = "none") %>%
+    coord_fixed_save_cropped(path = "assets/surface_demo.png")
