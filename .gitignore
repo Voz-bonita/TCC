@@ -6,3 +6,5 @@ abandoned_scrapping/
 scrapping/info/
 scrapping/odds/
 scrapping/base_info/
+scrapping/odds_all.json
+scrapping/info_all.json
