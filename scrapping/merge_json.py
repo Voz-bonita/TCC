@@ -31,3 +31,14 @@ for file in os.listdir("scrapping/odds/"):
 
     with open(f"scrapping/temp/{file}", "w+") as outfile:
         json.dump(odds_final, outfile)
+
+info_final = {}
+for file in os.listdir("scrapping/info/"):
+    with open(f"scrapping/info/{file}", "r") as f:
+        info_by_game = json.load(f)
+
+    league = file.replace("-info.json", "")
+    info_final[league] = info_by_game
+
+with open(f"scrapping/info_all.json", "w+") as outfile:
+    json.dump(info_final, outfile)
