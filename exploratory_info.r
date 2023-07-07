@@ -54,9 +54,12 @@ for (league in names(data)) {
     corr_test_df <- corr_test_df %>% rbind(out_vec)
 }
 
-(ggplot(data = score_df, aes(x = `x`, y = `y`, fill = `Proporção`)) +
+(ggplot(
+    data = filter(score_df, liga != "Supercopa do Brasil"),
+    aes(x = `x`, y = `y`, fill = `Proporção`)
+) +
     geom_tile(color = "black", lwd = 0.5) +
-    facet_wrap(vars(liga)) +
+    facet_wrap(vars(liga), ncol = 6) +
     xlab("Gols do time da casa") +
     ylab("Gols to time visitante") +
     scale_x_continuous(breaks = 0:5) +
