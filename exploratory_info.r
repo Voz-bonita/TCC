@@ -19,13 +19,15 @@ score_df <- expand.grid(x, y) %>%
     cbind(., rep(0, size)) %>%
     cbind(., rep(names(data), each = size)) %>%
     rename_all(~ c("x", "y", "Proporção", "liga"))
-corr_test_df <- data.frame(
-    "Liga" = c(NA), "n" = c(NA), "r" = c(NA),
-    "Estatística" = c(NA), "p-valor" = c(NA)
-)
+n_leagues <- length(data)
+corr_test_df <- data.frame(matrix(ncol = 5, nrow = n_leagues)) %>%
+    rename_all(~ c(
+        "Liga", "n", "r",
+        "Estatística", "p-valor"
+    ))
 
-for (league in names(data)) {
-    league_index <- which(names(data) == league)
+for (league_index in 1:n_leagues) {
+    league <- names(data)[league_index]
     n_max <- length(data[[league]])
     for (game in names(data[[league]])) {
         info <- data[[league]][[game]]
@@ -47,12 +49,27 @@ for (league in names(data)) {
     vary <- ey2 - ey^2
     corr <- (exy - ex * ey) / sqrt(varx) / sqrt(vary)
     tstar <- corr * sqrt(n_max - 2) / sqrt(1 - corr^2)
-    out_vec <- c(
-        "Liga" = league, "n" = n_max, "corr" = corr, "Estística" = tstar,
-        "p-valor" = 2 * pt(abs(tstar), df = n_max - 2, lower.tail = F)
-    )
-    corr_test_df <- corr_test_df %>% rbind(out_vec)
+    p_val <- 2 * pt(abs(tstar), df = n_max - 2, lower.tail = F)
+
+    corr_test_df[league_index, "Liga"] <- league
+    corr_test_df[league_index, "n"] <- n_max
+    corr_test_df[league_index, "r"] <- corr
+    corr_test_df[league_index, "Estatística"] <- tstar
+    corr_test_df[league_index, "p-valor"] <- p_val
 }
+
+corr_test_df["n"] <- as.numeric(corr_test_df["n"])
+corr_test_df["r"] <- as.numeric(corr_test_df["r"])
+corr_test_df["Estatística"] <- as.numeric(corr_test_df["Estatística"])
+corr_test_df["p-valor"] <- as.numeric(corr_test_df["p-valor"])
+temp <- round(corr_test_df[["p-valor"]], 3)
+corr_test_df["p-valor"] <- ifelse(temp < 0.1, ifelse(temp < 0.001, "$<$ 0.001", temp), "$>$ 0.1")
+corr_test_df %>%
+    na.omit() %>%
+    format_tab(
+        "\\label{tab:corr_test}Resultados dos testes de ausência de correlação entre os gols do time da casa e do time visitante",
+        digits = 3, format = "latex"
+    )
 
 (ggplot(
     data = filter(score_df, liga != "Supercopa do Brasil"),
