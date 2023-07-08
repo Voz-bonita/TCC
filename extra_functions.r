@@ -18,7 +18,7 @@ style_surface <- function(plot, ...) {
     plot <- plot +
         theme(
             strip.background = element_rect(
-                color = "black", fill = "lightblue", size = 0.5, linetype = "solid"
+                color = "black", fill = "#ffb834", size = 0.5, linetype = "solid"
             ),
             strip.text.x = element_text(
                 size = 10, color = "black",
